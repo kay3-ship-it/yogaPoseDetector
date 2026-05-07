@@ -289,7 +289,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.45;
+  opacity: 1;
+  /* Canvas composites the same frames on top when MediaPipe runs; if Pose fails to load, video stays visible */
 }
 
 .sequencer-canvas-hidden {
@@ -329,6 +330,11 @@
 
 .sequencer-record-top {
   margin-bottom: 8px;
+  align-self: flex-start;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
 }
 
 .sequencer-record-title-block {
@@ -340,6 +346,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 6px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
 }
 
 .sequencer-sanskrit-record {
@@ -347,6 +354,7 @@
   font-style: italic;
   opacity: 0.65;
   margin: 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
 }
 
 .sequencer-phase-block {
@@ -433,7 +441,13 @@
 
 .sequencer-rec-bottom {
   text-align: center;
-  padding-bottom: 8px;
+  padding: 14px 18px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  max-width: min(440px, 100%);
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .sequencer-rec-label {

@@ -78,7 +78,13 @@ export function initMediaPipe(
     canvasElement.width = videoElement.videoWidth;
     canvasElement.height = videoElement.videoHeight;
 
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    canvasCtx.drawImage(
+      videoElement,
+      0,
+      0,
+      canvasElement.width,
+      canvasElement.height
+    );
 
     if (results.poseLandmarks) {
       const drawLandmarksFn =

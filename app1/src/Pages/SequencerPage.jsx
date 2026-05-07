@@ -56,10 +56,28 @@ function SequencerPage() {
 
   useEffect(() => {
     streamRef.current = cameraStream;
-    if (videoRef.current && cameraStream) {
-      videoRef.current.srcObject = cameraStream;
+    const v = videoRef.current;
+    if (v && cameraStream) {
+      v.srcObject = cameraStream;
+      const playAttempt = v.play();
+      if (playAttempt !== undefined) {
+        playAttempt.catch(() => {
+          /* autoplay policies; user gesture already granted camera on hardware page */
+        });
+      }
     }
   }, [cameraStream]);
+
+  useEffect(() => {
+    if (view !== "record" || !cameraStream) return;
+    const v = videoRef.current;
+    if (!v) return;
+    v.srcObject = cameraStream;
+    const playAttempt = v.play();
+    if (playAttempt !== undefined) {
+      playAttempt.catch(() => {});
+    }
+  }, [view, recordPhase, cameraStream]);
 
   const isPoseRecorded = useCallback(
     (poseName) =>
@@ -170,21 +188,47 @@ function SequencerPage() {
     landmarkBufferRef.current = [];
     tZeroRef.current = getTZero() ?? recordingStartRef.current ?? Date.now();
 
-    const initHandle = requestAnimationFrame(() => {
-      if (cancelled) return;
-      if (videoRef.current && canvasRef.current) {
-        try {
-          mediaPipeCleanupRef.current = initMediaPipe(
-            videoRef.current,
-            canvasRef.current,
-            (frameData) => landmarkBufferRef.current.push(frameData),
-            tZeroRef.current
-          );
-        } catch {
-          /* MediaPipe CDN may be blocked */
+    const tryInitMediaPipe = () => {
+      if (cancelled) return false;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas) return false;
+      if (!video.videoWidth) return false;
+      try {
+        if (mediaPipeCleanupRef.current) {
+          mediaPipeCleanupRef.current();
+          mediaPipeCleanupRef.current = null;
         }
+        mediaPipeCleanupRef.current = initMediaPipe(
+          video,
+          canvas,
+          (frameData) => landmarkBufferRef.current.push(frameData),
+          tZeroRef.current
+        );
+      } catch (e) {
+        console.error("MediaPipe init failed:", e);
       }
-    });
+      return true;
+    };
+
+    let videoReadyAbort = null;
+
+    const scheduleMediaPipeInit = () => {
+      if (cancelled) return;
+      const video = videoRef.current;
+      if (!video) return;
+      void video.play()?.catch(() => {});
+      if (tryInitMediaPipe()) return;
+      videoReadyAbort = new AbortController();
+      const { signal } = videoReadyAbort;
+      const onReady = () => {
+        if (!cancelled) tryInitMediaPipe();
+      };
+      video.addEventListener("loadeddata", onReady, { once: true, signal });
+      video.addEventListener("playing", onReady, { once: true, signal });
+    };
+
+    const initHandle = requestAnimationFrame(() => scheduleMediaPipeInit());
 
     setRecordingSeconds(0);
     const start = Date.now();
@@ -237,6 +281,7 @@ function SequencerPage() {
 
     return () => {
       cancelled = true;
+      videoReadyAbort?.abort();
       cancelAnimationFrame(initHandle);
       if (mediaPipeCleanupRef.current) {
         mediaPipeCleanupRef.current();
