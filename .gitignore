@@ -1,9 +1,11 @@
 /node_modules
-src/config.js
 node_modules/
 dist/
+
+# Config / env
+src/config.js
 .env
-# Python
+
 # Python virtual environment
 backend/venv/
 
