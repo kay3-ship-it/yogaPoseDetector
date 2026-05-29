@@ -1,9 +1,31 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "./Home.css";
 // import {Yoga_home}  from "../../assets/Yoga_home.png"
 import { Link } from "react-router-dom";
 
+const API_BASE = "http://127.0.0.1:3001";
+
 const Home = () => {
+  const [disclaimer, setDisclaimer] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/config/homepage_disclaimer`);
+        const data = await res.json();
+        if (!cancelled && res.ok) {
+          setDisclaimer(data.value || "");
+        }
+      } catch {
+        if (!cancelled) setDisclaimer("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="homeContainer d-flex p-3">
       <div className="homeInfo   d-flex flex-column p-4 my-auto gap-3  ">
@@ -13,6 +35,14 @@ const Home = () => {
             Revitalize your mind, body, and soul
           </h4>
         </div>
+        {disclaimer ? (
+          <div className="homeDisclaimer">
+            <span className="homeDisclaimerIcon" aria-hidden>
+              ℹ️
+            </span>
+            <span className="homeDisclaimerText">{disclaimer}</span>
+          </div>
+        ) : null}
         <div className="homeModuleCards d-flex flex-column flex-md-row gap-3 align-items-stretch">
           <Link
             to="/login"
@@ -29,7 +59,7 @@ const Home = () => {
             </div>
           </Link>
           <Link
-            to="/practice"
+            to="/app"
             className="homeModuleCard homeModuleCard--practice text-decoration-none flex-fill"
           >
             <span className="homeModuleCard__icon" aria-hidden>

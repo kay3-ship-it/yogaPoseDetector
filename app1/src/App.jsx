@@ -21,17 +21,27 @@ import PracticeSessionPage from "./Pages/Practice/PracticeSessionPage";
 import SensorStatusStrip from "./Components/SensorStatusStrip";
 import { SessionContextProvider } from "./context/SessionContext";
 import { PracticeContextProvider } from "./context/PracticeContext";
+import { AuthContextProvider } from "./context/AuthContext";
 import RequireSession from "./Components/RequireSession";
+import ProtectedRoute from "./Components/app/ProtectedRoute";
+import LandingPage from "./Pages/app/LandingPage";
+import AppLoginPage from "./Pages/app/LoginPage";
+import SignupPage from "./Pages/app/SignupPage";
+import DashboardPage from "./Pages/app/DashboardPage";
+import AppHardwarePage from "./Pages/app/AppHardwarePage";
+import AppPracticePage from "./Pages/app/AppPracticePage";
+import HistoryPage from "./Pages/app/HistoryPage";
 
 const App = () => {
   return (
     <div className="app">
       <SessionContextProvider>
-        <PracticeContextProvider>
-          <BrowserRouter>
-            <Navbar />
-            <SensorStatusStrip />
-            <Routes>
+        <AuthContextProvider>
+          <PracticeContextProvider>
+            <BrowserRouter>
+              <Navbar />
+              <SensorStatusStrip />
+              <Routes>
               <Route path="/">
                 <Route index element={<Home />} />
                 <Route path="about" element={<About />} />
@@ -68,9 +78,45 @@ const App = () => {
               <Route path="/hardware" element={<HardwarePage />} />
               <Route path="/sequencer" element={<SequencerPage />} />
               <Route path="/review" element={<ReviewPage />} />
-            </Routes>
-          </BrowserRouter>
-        </PracticeContextProvider>
+              <Route path="/app" element={<LandingPage />} />
+              <Route path="/app/login" element={<AppLoginPage />} />
+              <Route path="/app/signup" element={<SignupPage />} />
+              <Route
+                path="/app/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/app/hardware"
+                element={
+                  <ProtectedRoute>
+                    <AppHardwarePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/app/practice"
+                element={
+                  <ProtectedRoute>
+                    <AppPracticePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/app/history"
+                element={
+                  <ProtectedRoute>
+                    <HistoryPage />
+                  </ProtectedRoute>
+                }
+              />
+              </Routes>
+            </BrowserRouter>
+          </PracticeContextProvider>
+        </AuthContextProvider>
       </SessionContextProvider>
     </div>
   );

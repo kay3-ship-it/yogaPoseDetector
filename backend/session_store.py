@@ -1,5 +1,5 @@
 """
-Offline session storage under SESSIONS_ROOT (default E:\\SensorData\\Sessions).
+Offline session storage under SESSIONS_ROOT (default D:\\SensorData\\Sessions).
 
 Layout:
   {SESSIONS_ROOT}/session_YYYY-MM-DD/{name}_{participantId}/{poseId}_{poseName}/
@@ -19,9 +19,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-SESSIONS_ROOT = Path(
-    os.environ.get("SESSIONS_ROOT", r"E:\SensorData\Sessions")
-)
+_external_sessions_root = os.environ.get("SESSIONS_ROOT_DISPLAY")
+if _external_sessions_root:
+    SESSIONS_ROOT = Path(_external_sessions_root)
+    print(f"[Storage] External storage detected. Using: {SESSIONS_ROOT}")
+else:
+    SESSIONS_ROOT = Path(r"D:\SensorData\Sessions")
+    print("[Storage Warning] External hard disk not detected.")
+    print("[Storage Warning] Data will be stored in D drive instead.")
+
+SESSIONS_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def _unix_timestamp() -> float:

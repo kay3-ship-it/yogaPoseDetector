@@ -30,6 +30,7 @@ const defaultConsentChecks = {
 };
 
 const HARDWARE_CALIBRATION_SESSION_KEY = "yoga_hardware_calibration_done";
+const APP_SESSION_ID_KEY = "yoga_app_session_id";
 
 export const SessionContextProvider = ({ children }) => {
   const [username, setUsernameState] = useState(() => {
@@ -56,6 +57,10 @@ export const SessionContextProvider = ({ children }) => {
       typeof sessionStorage !== "undefined" &&
       sessionStorage.getItem(HARDWARE_CALIBRATION_SESSION_KEY) === "1"
   );
+  const [appSessionId, setAppSessionIdState] = useState(
+    () => localStorage.getItem(APP_SESSION_ID_KEY) || ""
+  );
+  const [posePracticeCounts, setPosePracticeCounts] = useState({});
 
   const setHardwareCalibrationConfirmed = (value) => {
     const ok = Boolean(value);
@@ -90,6 +95,28 @@ export const SessionContextProvider = ({ children }) => {
     });
   };
 
+  const setSessionId = (value) => {
+    const next = String(value || "");
+    setAppSessionIdState(next);
+    if (next) {
+      localStorage.setItem(APP_SESSION_ID_KEY, next);
+    } else {
+      localStorage.removeItem(APP_SESSION_ID_KEY);
+    }
+  };
+
+  const incrementPoseCount = (poseName) => {
+    setPosePracticeCounts((prev) => ({
+      ...prev,
+      [poseName]: (prev[poseName] || 0) + 1,
+    }));
+  };
+
+  const clearSession = () => {
+    setSessionId("");
+    setPosePracticeCounts({});
+  };
+
   const value = useMemo(
     () => ({
       operatorInfo,
@@ -117,6 +144,11 @@ export const SessionContextProvider = ({ children }) => {
       setOfflineSessionDirectory,
       hardwareCalibrationConfirmed,
       setHardwareCalibrationConfirmed,
+      sessionId: appSessionId,
+      setSessionId,
+      posePracticeCounts,
+      incrementPoseCount,
+      clearSession,
     }),
     [
       operatorInfo,
@@ -133,6 +165,8 @@ export const SessionContextProvider = ({ children }) => {
       cameraStream,
       offlineSessionDirectory,
       hardwareCalibrationConfirmed,
+      appSessionId,
+      posePracticeCounts,
     ]
   );
 

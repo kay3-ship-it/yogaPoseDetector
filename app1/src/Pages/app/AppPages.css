@@ -1,0 +1,85 @@
+.app-shell {
+  min-height: calc(100vh - 66px);
+  background: #f7f8f4;
+  color: #102235;
+}
+
+.app-card {
+  background: #fffdf7;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.app-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.app-subtitle {
+  color: #475569;
+}
+
+.app-btn-primary {
+  background: #0f766e;
+  border-color: #0f766e;
+}
+
+.app-btn-primary:hover {
+  background: #0d655e;
+  border-color: #0d655e;
+}
+
+.app-landing {
+  min-height: calc(100vh - 66px);
+  display: flex;
+  align-items: center;
+}
+
+.app-form-wrap {
+  max-width: 640px;
+}
+
+.app-progress {
+  height: 9px;
+}
+
+.app-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.app-hardware .video-container {
+  min-height: 420px;
+}
+
+.app-session-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.66);
+  color: #fff;
+  z-index: 40;
+}
+
+.app-timer-dual {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.75);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+}
+
+.app-timeup {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.35);
+}
