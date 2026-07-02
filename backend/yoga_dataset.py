@@ -2,9 +2,7 @@
 Export finalized sessions into YogaDataset hierarchy:
 
   {drive}/YogaDataset/YYYY-MM-DD_session/
-    A_VideoOnly/
-    B_Video_IMU/
-    C_Video_IMU_Footrest/
+    {A_VideoOnly|B_Video_IMU|C_Video_IMU_Footrest}/   ← only the session's collection type
       {PARTICIPANT}_{INITIALS}_{ID}/
         {PoseName}_{PoseId}/
           metadata.json, landmarks.json, video.webm, imu_data.jsonl (when applicable)
@@ -242,12 +240,6 @@ def export_session_to_yoga_dataset(
     (dest_base / "metadata.json").write_text(
         json.dumps(session_meta, indent=2), encoding="utf-8"
     )
-
-    for other_type, other_name in COLLECTION_TYPE_DIRS.items():
-        if other_type == ctype:
-            continue
-        placeholder = root / day_name / other_name
-        placeholder.mkdir(parents=True, exist_ok=True)
 
     try:
         write_dataset_sync_config(storage_location)

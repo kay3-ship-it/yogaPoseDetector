@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -12,23 +12,11 @@ import {
 
   COLLECTION_TYPES,
 
-  getCollectionTypeAvailability,
+  collectSensorIdsFromRecordings,
 
-  getConnectedSensorIds,
-
-  getDefaultCollectionType,
-
-  getBodyConnectionState,
-
-  getFootrestConnectionState,
+  getCollectionTypeAvailabilityFromCollectedData,
 
 } from "../utils/collectionOptions";
-
-import {
-
-  normalizeImuPollPayload,
-
-} from "../utils/sensorStatus";
 
 import {
 
@@ -43,6 +31,8 @@ import {
   downloadSessionZip,
 
   fetchStorageVolumes,
+
+  fetchSessionStatus,
 
 } from "../utils/sessionRecorderApi";
 
@@ -76,9 +66,9 @@ function ReviewPage() {
 
 
 
-  const [imuDevices, setImuDevices] = useState({});
-
   const [storageVolumes, setStorageVolumes] = useState(null);
+
+  const [sessionSensorIds, setSessionSensorIds] = useState([]);
 
   const [collectionType, setCollectionType] = useState(COLLECTION_TYPES.A.id);
 
@@ -104,58 +94,6 @@ function ReviewPage() {
     () => getYogaDatasetRootForLocation(storageLocation),
     [storageLocation]
   );
-
-
-
-  const dataUrl = CONFIG.FLASK_DATA_URL?.replace(/\/$/, "");
-
-
-
-  useEffect(() => {
-
-    if (!dataUrl) return undefined;
-
-    let cancelled = false;
-
-    const pollMs = Math.max(500, Number(CONFIG.IMU_POLL_MS) || 1000);
-
-
-
-    const poll = async () => {
-
-      try {
-
-        const res = await fetch(`${dataUrl}/debug/imu`, { cache: "no-store" });
-
-        if (cancelled || !res.ok) return;
-
-        const data = await res.json();
-
-        setImuDevices(normalizeImuPollPayload(data, CONFIG.SENSOR_SLOTS));
-
-      } catch {
-
-        if (!cancelled) setImuDevices({});
-
-      }
-
-    };
-
-
-
-    void poll();
-
-    const id = window.setInterval(poll, pollMs);
-
-    return () => {
-
-      cancelled = true;
-
-      window.clearInterval(id);
-
-    };
-
-  }, [dataUrl]);
 
 
 
@@ -191,11 +129,57 @@ function ReviewPage() {
 
 
 
+  useEffect(() => {
+
+    if (!CONFIG.USE_OFFLINE_SESSION_RECORDER) return undefined;
+
+    let cancelled = false;
+
+    (async () => {
+
+      const status = await fetchSessionStatus();
+
+      if (!cancelled && status?.active && Array.isArray(status.sensor_ids)) {
+
+        setSessionSensorIds(status.sensor_ids);
+
+      }
+
+    })();
+
+    return () => {
+
+      cancelled = true;
+
+    };
+
+  }, []);
+
+
+
+  const collectedSensorIds = useMemo(() => {
+
+    const fromRecordings = collectSensorIdsFromRecordings(sessionRecordings);
+
+    const merged = new Set([
+
+      ...sessionSensorIds.map((id) => String(id).toLowerCase()),
+
+      ...fromRecordings,
+
+    ]);
+
+    return [...merged];
+
+  }, [sessionRecordings, sessionSensorIds]);
+
+
+
   const collectionAvailability = useMemo(
 
-    () => getCollectionTypeAvailability(imuDevices),
+    () => getCollectionTypeAvailabilityFromCollectedData(collectedSensorIds),
 
-    [imuDevices]
+    [collectedSensorIds]
 
   );
 
@@ -203,31 +187,57 @@ function ReviewPage() {
 
   useEffect(() => {
 
-    const defaultType = getDefaultCollectionType(imuDevices);
+    if (collectionAvailability.detectedId) {
 
-    setCollectionType((prev) => {
+      setCollectionType(collectionAvailability.detectedId);
 
-      const availability = getCollectionTypeAvailability(imuDevices);
+    }
 
-      const key =
+  }, [collectionAvailability.detectedId]);
 
-        prev === COLLECTION_TYPES.A.id
 
-          ? "A"
 
-          : prev === COLLECTION_TYPES.B.id
+  const collectedBodyState = useMemo(() => {
 
-            ? "B"
+    const activeIds = CONFIG.SENSOR_SLOTS.filter((s) => s.status === "active").map(
 
-            : "C";
+      (s) => s.id
 
-      if (availability[key]?.enabled) return prev;
+    );
 
-      return defaultType;
+    const connectedIds = activeIds.filter((id) => collectedSensorIds.includes(id));
 
-    });
+    return {
 
-  }, [imuDevices]);
+      connectedIds,
+
+      requiredCount: activeIds.length,
+
+    };
+
+  }, [collectedSensorIds]);
+
+
+
+  const collectedFootrestState = useMemo(() => {
+
+    const footrestIds = CONFIG.SENSOR_SLOTS.filter((s) => s.status === "placeholder").map(
+
+      (s) => s.id
+
+    );
+
+    const connectedIds = footrestIds.filter((id) => collectedSensorIds.includes(id));
+
+    return {
+
+      connectedIds,
+
+      requiredCount: footrestIds.length,
+
+    };
+
+  }, [collectedSensorIds]);
 
 
 
@@ -243,18 +253,6 @@ function ReviewPage() {
 
 
 
-  const bodyState = useMemo(() => getBodyConnectionState(imuDevices), [imuDevices]);
-
-  const footrestState = useMemo(
-
-    () => getFootrestConnectionState(imuDevices),
-
-    [imuDevices]
-
-  );
-
-
-
   const handleFinalizeSession = useCallback(async () => {
 
     setFinalizingOffline(true);
@@ -265,15 +263,13 @@ function ReviewPage() {
 
       const recorded = sessionRecordings.filter((r) => !r.skipped).length;
 
-      const connectedIds = getConnectedSensorIds(imuDevices);
-
-      const footrestIds = connectedIds.filter((id) =>
+      const footrestIds = collectedSensorIds.filter((id) =>
 
         CONFIG.SENSOR_SLOTS.some((s) => s.id === id && s.status === "placeholder")
 
       );
 
-      const bodyIds = connectedIds.filter((id) =>
+      const bodyIds = collectedSensorIds.filter((id) =>
 
         CONFIG.SENSOR_SLOTS.some((s) => s.id === id && s.status === "active")
 
@@ -361,7 +357,7 @@ function ReviewPage() {
 
     storageLocation,
 
-    imuDevices,
+    collectedSensorIds,
 
     setOfflineSessionDirectory,
 
@@ -518,9 +514,9 @@ function ReviewPage() {
 
       storageLocation,
 
-      connectedImus: bodyState.connectedIds,
+      connectedImus: collectedBodyState.connectedIds,
 
-      connectedFootrestSensors: footrestState.connectedIds,
+      connectedFootrestSensors: collectedFootrestState.connectedIds,
 
       sessionDate: new Date().toISOString(),
 
@@ -564,9 +560,9 @@ function ReviewPage() {
 
     storageLocation,
 
-    bodyState,
+    collectedBodyState,
 
-    footrestState,
+    collectedFootrestState,
 
   ]);
 
@@ -675,6 +671,12 @@ function ReviewPage() {
 
             </h2>
 
+            <p className="small text-muted mb-3">
+
+              Detected from recorded session data. Only the matching dataset type can be saved.
+
+            </p>
+
             <div className="collection-type-grid">
 
               {collectionOptions.map((opt) => {
@@ -729,13 +731,15 @@ function ReviewPage() {
 
             <p className="small text-muted mt-2 mb-0">
 
-              Body sensors online: {bodyState.connectedIds.length} / {bodyState.requiredCount}
+              Body sensors recorded: {collectedBodyState.connectedIds.length} /{" "}
+
+              {collectedBodyState.requiredCount}
 
               {" · "}
 
-              Footrest sensors online: {footrestState.connectedIds.length} /{" "}
+              Footrest sensors recorded: {collectedFootrestState.connectedIds.length} /{" "}
 
-              {footrestState.requiredCount}
+              {collectedFootrestState.requiredCount}
 
             </p>
 

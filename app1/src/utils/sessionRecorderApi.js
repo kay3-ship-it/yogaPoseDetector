@@ -128,6 +128,16 @@ export async function fetchStorageVolumes() {
   }
 }
 
+export async function fetchSessionStatus() {
+  try {
+    const res = await fetch(`${BASE}/session/status`);
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function downloadSessionZip(sessionDirectory) {
   const params = new URLSearchParams();
   if (sessionDirectory) params.set("directory", sessionDirectory);
